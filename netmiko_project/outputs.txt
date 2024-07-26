@@ -1,0 +1,141 @@
+----------------------------------------------------------------------
+
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.1.1, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 1/2/4 ms
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.10.2, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 16/37/60 ms
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.10.3, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 8/14/40 ms
+
+Interface                  IP-Address      OK? Method Status                Protocol
+FastEthernet0/0            10.10.1.1       YES NVRAM  up                    up      
+FastEthernet0/1            10.1.1.1        YES NVRAM  up                    up      
+FastEthernet1/0            10.10.10.1      YES NVRAM  up                    up      
+FastEthernet2/0            unassigned      YES NVRAM  administratively down down    
+
+Cisco IOS Software, 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
+Compiled Wed 18-Aug-10 08:18 by prod_rel_team
+ROM: ROMMON Emulation Microcode
+ROM: 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
+R1 uptime is 1 hour, 7 minutes
+Cisco 3745 (R7000) processor (revision 2.0) with 249856K/12288K bytes of memory.
+Processor board ID FTX0945W0MY
+R7000 CPU at 350MHz, Implementation 39, Rev 2.1, 256KB L2, 512KB L3 Cache
+4 FastEthernet interfaces
+DRAM configuration is 64 bits wide with parity enabled.
+151K bytes of NVRAM.
+Configuration register is 0x2102
+
+
+NAME: "3745 chassis", DESCR: "3745 chassis"
+PID:                   , VID: 2.0, SN: FTX0945W0MY
+
+NAME: "c3745 Motherboard with Fast Ethernet", DESCR: "c3745 Motherboard with Fast Ethernet"
+PID: C3745-2FE         , VID: 2.0, SN: XXXXXXXXXXX
+
+NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
+PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
+
+NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
+PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
+
+----------------------------------------------------------------------
+
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.1.1, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 164/420/1416 ms
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.10.2, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 1/1/4 ms
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.10.3, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 20/54/192 ms
+
+Interface                  IP-Address      OK? Method Status                Protocol
+FastEthernet0/0            10.10.10.2      YES NVRAM  up                    up      
+FastEthernet0/1            10.1.1.1        YES NVRAM  up                    up      
+FastEthernet1/0            unassigned      YES NVRAM  administratively down down    
+FastEthernet2/0            unassigned      YES NVRAM  administratively down down    
+
+Cisco IOS Software, 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
+Compiled Wed 18-Aug-10 08:18 by prod_rel_team
+ROM: ROMMON Emulation Microcode
+ROM: 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
+R2 uptime is 1 hour, 7 minutes
+Cisco 3745 (R7000) processor (revision 2.0) with 249856K/12288K bytes of memory.
+Processor board ID FTX0945W0MY
+R7000 CPU at 350MHz, Implementation 39, Rev 2.1, 256KB L2, 512KB L3 Cache
+4 FastEthernet interfaces
+DRAM configuration is 64 bits wide with parity enabled.
+151K bytes of NVRAM.
+Configuration register is 0x2102
+
+
+NAME: "3745 chassis", DESCR: "3745 chassis"
+PID:                   , VID: 2.0, SN: FTX0945W0MY
+
+NAME: "c3745 Motherboard with Fast Ethernet", DESCR: "c3745 Motherboard with Fast Ethernet"
+PID: C3745-2FE         , VID: 2.0, SN: XXXXXXXXXXX
+
+NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
+PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
+
+NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
+PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
+
+----------------------------------------------------------------------
+
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.1.1, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 12/52/184 ms
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.10.2, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 12/60/204 ms
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.10.3, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 1/1/4 ms
+
+Interface                  IP-Address      OK? Method Status                Protocol
+FastEthernet0/0            10.10.10.3      YES NVRAM  up                    up      
+FastEthernet0/1            unassigned      YES NVRAM  administratively down down    
+FastEthernet1/0            unassigned      YES NVRAM  administratively down down    
+FastEthernet2/0            unassigned      YES NVRAM  administratively down down    
+
+Cisco IOS Software, 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
+Compiled Wed 18-Aug-10 08:18 by prod_rel_team
+ROM: ROMMON Emulation Microcode
+ROM: 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
+R3 uptime is 1 hour, 7 minutes
+Cisco 3745 (R7000) processor (revision 2.0) with 249856K/12288K bytes of memory.
+Processor board ID FTX0945W0MY
+R7000 CPU at 350MHz, Implementation 39, Rev 2.1, 256KB L2, 512KB L3 Cache
+4 FastEthernet interfaces
+DRAM configuration is 64 bits wide with parity enabled.
+151K bytes of NVRAM.
+Configuration register is 0x2102
+
+
+NAME: "3745 chassis", DESCR: "3745 chassis"
+PID:                   , VID: 2.0, SN: FTX0945W0MY
+
+NAME: "c3745 Motherboard with Fast Ethernet", DESCR: "c3745 Motherboard with Fast Ethernet"
+PID: C3745-2FE         , VID: 2.0, SN: XXXXXXXXXXX
+
+NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
+PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
+
+NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
+PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
+

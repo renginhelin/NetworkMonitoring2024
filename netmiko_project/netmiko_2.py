@@ -1,3 +1,4 @@
+
 import netmiko
 
 def send_ping_to_multiple_devices(connection, devices: list):
