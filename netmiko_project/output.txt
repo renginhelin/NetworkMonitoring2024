@@ -8,12 +8,12 @@ Success rate is 100 percent (5/5), round-trip min/avg/max = 1/1/4 ms
 Type escape sequence to abort.
 Sending 5, 100-byte ICMP Echos to 10.10.10.2, timeout is 2 seconds:
 !!!!!
-Success rate is 100 percent (5/5), round-trip min/avg/max = 8/16/24 ms
+Success rate is 100 percent (5/5), round-trip min/avg/max = 4/9/16 ms
 
 Type escape sequence to abort.
 Sending 5, 100-byte ICMP Echos to 10.10.10.3, timeout is 2 seconds:
 !!!!!
-Success rate is 100 percent (5/5), round-trip min/avg/max = 8/17/32 ms
+Success rate is 100 percent (5/5), round-trip min/avg/max = 12/16/20 ms
 
 Interface                  IP-Address      OK? Method Status                Protocol
 FastEthernet0/0            10.10.1.1       YES NVRAM  up                    up      
@@ -25,7 +25,7 @@ Cisco IOS Software, 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), 
 Compiled Wed 18-Aug-10 08:18 by prod_rel_team
 ROM: ROMMON Emulation Microcode
 ROM: 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
-R1 uptime is 1 hour, 18 minutes
+R1 uptime is 40 minutes
 Cisco 3745 (R7000) processor (revision 2.0) with 249856K/12288K bytes of memory.
 Processor board ID FTX0945W0MY
 R7000 CPU at 350MHz, Implementation 39, Rev 2.1, 256KB L2, 512KB L3 Cache
@@ -46,65 +46,25 @@ PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321
 NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
 PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
 
+
+Protocol  Address          Age (min)  Hardware Addr   Type   Interface
+Internet  10.10.1.1               -   c401.46f3.0000  ARPA   FastEthernet0/0
+Internet  10.10.10.2             40   c402.5494.0000  ARPA   FastEthernet1/0
+Internet  10.10.10.3             40   c403.348c.0000  ARPA   FastEthernet1/0
+Internet  10.10.1.10             19   0200.4c4f.4f50  ARPA   FastEthernet0/0
+Internet  10.10.10.1              -   c401.46f3.0010  ARPA   FastEthernet1/0
+Internet  10.1.1.1                -   c401.46f3.0001  ARPA   FastEthernet0/1
 ----------------------------------------------------------------------
 
 Type escape sequence to abort.
 Sending 5, 100-byte ICMP Echos to 10.10.1.1, timeout is 2 seconds:
 !!!!!
-Success rate is 100 percent (5/5), round-trip min/avg/max = 28/46/108 ms
+Success rate is 100 percent (5/5), round-trip min/avg/max = 120/280/764 ms
 
 Type escape sequence to abort.
 Sending 5, 100-byte ICMP Echos to 10.10.10.2, timeout is 2 seconds:
 !!!!!
-Success rate is 100 percent (5/5), round-trip min/avg/max = 1/2/4 ms
-
-Type escape sequence to abort.
-Sending 5, 100-byte ICMP Echos to 10.10.10.3, timeout is 2 seconds:
-!!!!!
-Success rate is 100 percent (5/5), round-trip min/avg/max = 20/62/232 ms
-
-Interface                  IP-Address      OK? Method Status                Protocol
-FastEthernet0/0            10.10.10.2      YES NVRAM  up                    up      
-FastEthernet0/1            10.1.1.1        YES NVRAM  up                    up      
-FastEthernet1/0            unassigned      YES NVRAM  administratively down down    
-FastEthernet2/0            unassigned      YES NVRAM  administratively down down    
-
-Cisco IOS Software, 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
-Compiled Wed 18-Aug-10 08:18 by prod_rel_team
-ROM: ROMMON Emulation Microcode
-ROM: 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
-R2 uptime is 1 hour, 17 minutes
-Cisco 3745 (R7000) processor (revision 2.0) with 249856K/12288K bytes of memory.
-Processor board ID FTX0945W0MY
-R7000 CPU at 350MHz, Implementation 39, Rev 2.1, 256KB L2, 512KB L3 Cache
-4 FastEthernet interfaces
-DRAM configuration is 64 bits wide with parity enabled.
-151K bytes of NVRAM.
-Configuration register is 0x2102
-
-NAME: "3745 chassis", DESCR: "3745 chassis"
-PID:                   , VID: 2.0, SN: FTX0945W0MY
-
-NAME: "c3745 Motherboard with Fast Ethernet", DESCR: "c3745 Motherboard with Fast Ethernet"
-PID: C3745-2FE         , VID: 2.0, SN: XXXXXXXXXXX
-
-NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
-PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
-
-NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
-PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
-
-----------------------------------------------------------------------
-
-Type escape sequence to abort.
-Sending 5, 100-byte ICMP Echos to 10.10.1.1, timeout is 2 seconds:
-!!!!!
-Success rate is 100 percent (5/5), round-trip min/avg/max = 24/31/44 ms
-
-Type escape sequence to abort.
-Sending 5, 100-byte ICMP Echos to 10.10.10.2, timeout is 2 seconds:
-!!!!!
-Success rate is 100 percent (5/5), round-trip min/avg/max = 20/56/164 ms
+Success rate is 100 percent (5/5), round-trip min/avg/max = 32/172/424 ms
 
 Type escape sequence to abort.
 Sending 5, 100-byte ICMP Echos to 10.10.10.3, timeout is 2 seconds:
@@ -121,7 +81,7 @@ Cisco IOS Software, 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), 
 Compiled Wed 18-Aug-10 08:18 by prod_rel_team
 ROM: ROMMON Emulation Microcode
 ROM: 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
-R3 uptime is 1 hour, 17 minutes
+R3 uptime is 34 minutes
 Cisco 3745 (R7000) processor (revision 2.0) with 249856K/12288K bytes of memory.
 Processor board ID FTX0945W0MY
 R7000 CPU at 350MHz, Implementation 39, Rev 2.1, 256KB L2, 512KB L3 Cache
@@ -142,3 +102,62 @@ PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321
 NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
 PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
 
+
+Protocol  Address          Age (min)  Hardware Addr   Type   Interface
+Internet  10.10.10.2             33   c402.5494.0000  ARPA   FastEthernet0/0
+Internet  10.10.10.3              -   c403.348c.0000  ARPA   FastEthernet0/0
+Internet  10.10.10.1             33   c401.46f3.0010  ARPA   FastEthernet0/0
+----------------------------------------------------------------------
+
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.1.1, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 116/250/704 ms
+
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.10.2, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 1/2/4 ms
+
+Type escape sequence to abort.
+Sending 5, 100-byte ICMP Echos to 10.10.10.3, timeout is 2 seconds:
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 20/45/120 ms
+
+Interface                  IP-Address      OK? Method Status                Protocol
+FastEthernet0/0            10.10.10.2      YES NVRAM  up                    up      
+FastEthernet0/1            10.1.1.1        YES NVRAM  up                    up      
+FastEthernet1/0            unassigned      YES NVRAM  administratively down down    
+FastEthernet2/0            unassigned      YES NVRAM  administratively down down    
+
+Cisco IOS Software, 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
+Compiled Wed 18-Aug-10 08:18 by prod_rel_team
+ROM: ROMMON Emulation Microcode
+ROM: 3700 Software (C3745-ADVIPSERVICESK9-M), Version 12.4(25d), RELEASE SOFTWARE (fc1)
+R2 uptime is 34 minutes
+Cisco 3745 (R7000) processor (revision 2.0) with 249856K/12288K bytes of memory.
+Processor board ID FTX0945W0MY
+R7000 CPU at 350MHz, Implementation 39, Rev 2.1, 256KB L2, 512KB L3 Cache
+4 FastEthernet interfaces
+DRAM configuration is 64 bits wide with parity enabled.
+151K bytes of NVRAM.
+Configuration register is 0x2102
+
+NAME: "3745 chassis", DESCR: "3745 chassis"
+PID:                   , VID: 2.0, SN: FTX0945W0MY
+
+NAME: "c3745 Motherboard with Fast Ethernet", DESCR: "c3745 Motherboard with Fast Ethernet"
+PID: C3745-2FE         , VID: 2.0, SN: XXXXXXXXXXX
+
+NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
+PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
+
+NAME: "One port Fastethernet TX", DESCR: "One port Fastethernet TX"
+PID: NM-1FE-TX=        , VID: 1.0, SN: 7720321    
+
+
+Protocol  Address          Age (min)  Hardware Addr   Type   Interface
+Internet  10.10.10.2              -   c402.5494.0000  ARPA   FastEthernet0/0
+Internet  10.10.10.3             33   c403.348c.0000  ARPA   FastEthernet0/0
+Internet  10.10.10.1             33   c401.46f3.0010  ARPA   FastEthernet0/0
+Internet  10.1.1.1                -   c402.5494.0001  ARPA   FastEthernet0/1
