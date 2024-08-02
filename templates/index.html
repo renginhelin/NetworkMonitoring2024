@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Device Pinger</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .container {
+            margin-top: 50px;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .device-card {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .device-status {
+            display: flex;
+            align-items: center;
+        }
+
+        .dot {
+            height: 15px;
+            width: 15px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        .green-dot {
+            background-color: #28a745;
+        }
+
+        .red-dot {
+            background-color: #dc3545;
+        }
+
+        #output-container {
+            white-space: pre-wrap; /* Ensure that the preformatted text wraps properly */
+        }
+
+        /* Modal Styles */
+        .modal-content {
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .modal-header {
+            border-bottom: 1px solid #ddd;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            text-align: right;
+        }
+
+        .operation-btn {
+            display: block;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn-loading {
+            position: relative;
+        }
+
+        .btn-loading .spinner-border {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: none;
+        }
+
+        .btn-loading.loading .spinner-border {
+            display: inline-block;
+        }
+
+        table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        table thead th {
+            background-color: #f8f9fa;
+            border-bottom: 2px solid #ddd;
+        }
+
+        table th, table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .output-section {
+            margin-top: 20px;
+        }
+
+        .output-section h6 {
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center">Network Device Pinger</h1>
+        <div id="devices-container" class="mt-4">
+            <!-- Device cards will be populated here -->
+        </div>
+    </div>
+
+    <!-- Operations Modal -->
+    <div class="modal fade" id="operationsModal" tabindex="-1" role="dialog" aria-labelledby="operationsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="operationsModalLabel">Select Operation</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <button class="btn btn-primary operation-btn" data-operation="show_interface_brief">
+                        Show Interface Brief
+                    </button>
+                    <button class="btn btn-primary operation-btn" data-operation="show_inventory">
+                        Show Inventory
+                    </button>
+                    <button class="btn btn-primary operation-btn" data-operation="show_hardware_and_version">
+                        Show Hardware and Version
+                    </button>
+                    <button class="btn btn-primary operation-btn" data-operation="show_arp_table">
+                        Show ARP Table
+                    </button>
+                    <div id="output-container" class="output-section">
+                        <!-- Output tables will be populated here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    $(document).ready(function () {
+        function loadDevices() {
+            $.ajax({
+                url: '/ping_devices',
+                type: 'GET',
+                success: function (response) {
+                    $('#devices-container').empty();
+                    response.forEach(device => {
+                        let dotClass = device.status ? 'green-dot' : 'red-dot';
+                        let statusText = device.status ? 'Online' : 'Offline';
+                        let deviceCard = `
+                            <div class="device-card">
+                                <div class="device-status">
+                                    <span class="dot ${dotClass}"></span>
+                                    <span>${device.host} (${statusText})</span>
+                                </div>
+                                <button class="btn btn-primary connect-btn" data-host="${device.host}">Connect</button>
+                            </div>
+                        `;
+                        $('#devices-container').append(deviceCard);
+                    });
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error loading devices:', textStatus, errorThrown);
+                    alert('An error occurred while loading devices. Please check the console for more details.');
+                }
+            });
+        }
+
+        // Load devices initially
+        loadDevices();
+
+        // Set up polling every 10 seconds (10000 milliseconds)
+        setInterval(loadDevices, 1000);
+
+        $(document).on('click', '.connect-btn', function (event) {
+            event.preventDefault(); // Prevent default action if inside a form
+            let host = $(this).attr('data-host');
+            $.ajax({
+                url: '/start_ssh',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ host: host }),
+                success: function (response) {
+                    if (response.status === 'success') {
+                        $('#operationsModal').modal('show');
+                        $('#operationsModal').data('host', host);
+                    } else {
+                        console.error('Failed to connect:', response.message);
+                        alert('Failed to connect: ' + response.message);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error starting SSH session:', textStatus, errorThrown);
+                    alert('An error occurred while starting the SSH session. Please check the console for more details.');
+                }
+            });
+        });
+
+        $(document).on('click', '.operation-btn', function () {
+            let host = $('#operationsModal').data('host');
+            let operation = $(this).attr('data-operation');
+            let button = $(this);
+            button.addClass('btn-loading loading');
+            $.ajax({
+                url: '/perform_operation',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ host: host, operation: operation }),
+                success: function (response) {
+                    button.removeClass('btn-loading loading');
+                    let outputHtml = '';
+                    if (response.status === 'success') {
+                        if (operation === 'show_inventory' || operation === 'show_hardware_and_version') {
+                            outputHtml = `<pre>${response.output}</pre>`;
+                        } else {
+                            outputHtml = response.output;
+                        }
+                    } else {
+                        outputHtml = 'Error: ' + response.message;
+                    }
+                    $('#output-container').html(outputHtml);
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    button.removeClass('btn-loading loading');
+                    console.error('Error performing operation:', textStatus, errorThrown);
+                    $('#output-container').html('An error occurred while performing the operation. Please check the console for more details.');
+                }
+            });
+        });
+
+        $(document).on('click', '#cancel-btn', function () {
+            let host = $('#operationsModal').data('host');
+            $.ajax({
+                url: '/cancel_ssh',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ host: host }),
+                success: function (response) {
+                    if (response.status === 'success') {
+                        $('#operationsModal').modal('hide');
+                    } else {
+                        console.error('Failed to cancel SSH session:', response.message);
+                        alert('Failed to cancel: ' + response.message);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error canceling SSH session:', textStatus, errorThrown);
+                    alert('An error occurred while canceling the SSH session. Please check the console for more details.');
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+
+</html>
