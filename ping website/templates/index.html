@@ -1,128 +1,264 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Network Device Pinger</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <style>
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Arial', sans-serif;
-        }
-
         .container {
             margin-top: 50px;
-            padding: 30px;
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
         }
 
-        h1 {
-            color: #007bff;
-        }
-
-        .form-group label {
-            font-weight: bold;
-        }
-
-        .results {
-            margin-top: 20px;
-        }
-
-        .dot {
-            height: 25px;
-            width: 25px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 10px;
-        }
-
-        .green-dot {
-            background-color: #28a745;
-        }
-
-        .red-dot {
-            background-color: #dc3545;
-        }
-
-        .result-item {
-            display: flex;
-            align-items: center;
+        .device-card {
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f8f9fa;
             margin-bottom: 10px;
         }
 
-        .result-text {
-            margin-left: 10px;
-            font-family: 'Courier New', Courier, monospace;
+        .btn-custom {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-custom:hover {
+            background-color: #0056b3;
+        }
+
+        .modal-content {
+            background-color: #f8f9fa;
+        }
+
+        .modal-header,
+        .modal-footer {
+            background-color: #007bff;
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #dee2e6;
+        }
+
+        th,
+        td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f1f1;
         }
     </style>
 </head>
-
 <body>
     <div class="container">
         <h1 class="text-center">Network Device Pinger</h1>
-        <form id="ping-form" method="post" action="/ping_devices">
-            <div class="form-group">
-                <label for="router_ip">Router IP Address</label>
-                <input type="text" class="form-control" id="router_ip" name="router_ip" placeholder="Enter router IP address" required>
+        <div id="devices-container" class="mt-4">
+            <!-- Device cards will be populated here -->
+        </div>
+        <div id="arp-ping-results" class="mt-4">
+            <!-- ARP ping results will be populated here -->
+        </div>
+    </div>
+
+    <!-- Operations Modal -->
+    <div class="modal fade" id="operationsModal" tabindex="-1" role="dialog" aria-labelledby="operationsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="operationsModalLabel">Perform Operation</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="operation-select">Choose an operation:</label>
+                        <select class="form-control" id="operation-select">
+                            <option value="show_interface_brief">Show IP Interface Brief</option>
+                            <option value="show_inventory">Show Inventory</option>
+                            <option value="show_hardware_and_version">Show Hardware and Version</option>
+                            <option value="show_arp_table">Show ARP Table</option>
+                        </select>
+                    </div>
+                    <div id="operation-output">
+                        <!-- Operation output will be displayed here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="perform-operation-btn">Perform Operation</button>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" class="form-control" id="username" name="username" placeholder="Enter username" required>
+        </div>
+    </div>
+
+    <!-- ARP Ping Results Modal -->
+    <div class="modal fade" id="arpPingModal" tabindex="-1" role="dialog" aria-labelledby="arpPingModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="arpPingModalLabel">ARP Ping Results</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="arp-ping-results-body">
+                    <!-- ARP ping results will be displayed here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" class="form-control" id="password" name="password" placeholder="Enter password" required>
-            </div>
-            <button type="submit" class="btn btn-primary btn-block">Ping Devices</button>
-        </form>
-        <div id="results" class="results">
-            <h2>Results</h2>
-            <div id="results-container"></div>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         $(document).ready(function () {
-            $('#ping-form').on('submit', function (e) {
-                e.preventDefault();
-                $('#results-container').html('<p>Pinging devices, please wait...</p>');
+            function loadDevices() {
                 $.ajax({
                     url: '/ping_devices',
-                    type: 'POST',
-                    data: $(this).serialize(),
+                    type: 'GET',
                     success: function (response) {
-                        if (response.error) {
-                            $('#results-container').html(`<p class="text-danger">Error: ${response.error}</p>`);
+                        let devicesContainer = $('#devices-container');
+                        devicesContainer.empty();
+                        response.forEach(device => {
+                            let statusClass = device.status ? 'text-success' : 'text-danger';
+                            let statusText = device.status ? 'Reachable' : 'Unreachable';
+                            let deviceCard = `
+                                <div class="device-card">
+                                    <h5>Device: ${device.host}</h5>
+                                    <p>Status: <span class="${statusClass}">${statusText}</span></p>
+                                    <button class="btn btn-primary start-ssh-btn" data-host="${device.host}">Start SSH</button>
+                                    <button class="btn btn-danger end-ssh-btn d-none" data-host="${device.host}">End SSH</button>
+                                    <button class="btn btn-custom perform-operation-btn d-none" data-host="${device.host}" data-toggle="modal" data-target="#operationsModal">Perform Operation</button>
+                                    <button class="btn btn-custom ping-arp-btn d-none" data-host="${device.host}">Ping ARP Devices</button>
+                                </div>
+                            `;
+                            devicesContainer.append(deviceCard);
+                        });
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.error('Error fetching device status:', textStatus, errorThrown);
+                        alert('An error occurred while fetching device status. Please check the console for more details.');
+                    }
+                });
+            }
+
+            loadDevices();
+
+            $(document).on('click', '.start-ssh-btn', function () {
+                let host = $(this).data('host');
+                $.ajax({
+                    url: '/start_ssh',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ host: host }),
+                    success: function (response) {
+                        alert('SSH session started for ' + host);
+                        let card = $(`button[data-host="${host}"]`).closest('.device-card');
+                        card.find('.start-ssh-btn').addClass('d-none');
+                        card.find('.end-ssh-btn, .perform-operation-btn, .ping-arp-btn').removeClass('d-none');
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.error('Error starting SSH session:', textStatus, errorThrown);
+                        alert('An error occurred while starting SSH session. Please check the console for more details.');
+                    }
+                });
+            });
+
+            $(document).on('click', '.end-ssh-btn', function () {
+                let host = $(this).data('host');
+                $.ajax({
+                    url: '/cancel_ssh',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ host: host }),
+                    success: function (response) {
+                        alert('SSH session ended for ' + host);
+                        let card = $(`button[data-host="${host}"]`).closest('.device-card');
+                        card.find('.end-ssh-btn, .perform-operation-btn, .ping-arp-btn').addClass('d-none');
+                        card.find('.start-ssh-btn').removeClass('d-none');
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.error('Error ending SSH session:', textStatus, errorThrown);
+                        alert('An error occurred while ending SSH session. Please check the console for more details.');
+                    }
+                });
+            });
+
+            $('#perform-operation-btn').click(function () {
+                let operation = $('#operation-select').val();
+                let host = $('#operationsModal').data('host');
+                $.ajax({
+                    url: '/perform_operation',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ host: host, operation: operation }),
+                    success: function (response) {
+                        if (response.status === 'success') {
+                            $('#operation-output').html(response.output);
                         } else {
-                            let results = response.results;
-                            $('#results-container').empty();
-                            for (let device in results) {
-                                let resultItem = $('<div class="result-item"></div>');
-                                let dot = $('<span class="dot"></span>');
-                                let resultText = $(`<span class="result-text">${device}: ${results[device].success ? 'Success' : 'Failed'}</span>`);
-                                if (results[device].success) {
-                                    dot.addClass('green-dot');
-                                } else {
-                                    dot.addClass('red-dot');
-                                }
-                                resultItem.append(dot);
-                                resultItem.append(resultText);
-                                $('#results-container').append(resultItem);
-                            }
+                            $('#operation-output').html(`<p class="text-danger">${response.message}</p>`);
                         }
                     },
-                    error: function (error) {
-                        $('#results-container').html('<p class="text-danger">An error occurred while pinging the devices.</p>');
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.error('Error performing operation:', textStatus, errorThrown);
+                        alert('An error occurred while performing operation. Please check the console for more details.');
+                    }
+                });
+            });
+
+            $('#operationsModal').on('show.bs.modal', function (event) {
+                let button = $(event.relatedTarget);
+                let host = button.data('host');
+                $(this).data('host', host);
+                $('#operation-output').empty();
+            });
+
+            $(document).on('click', '.ping-arp-btn', function () {
+                let host = $(this).data('host');
+                $.ajax({
+                    url: '/ping_arp_devices',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({host: host}),
+                    success: function (response) {
+                        let resultsBody = $('#arp-ping-results-body');
+                        resultsBody.empty();
+                        if (response.status === 'success') {
+                            let resultsTable = '<table class="table table-striped"><thead><tr><th>IP Address</th><th>Ping Result</th></tr></thead><tbody>';
+                            response.results.forEach(result => {
+                                let resultClass = result.reachable ? 'text-success' : 'text-danger';
+                                resultsTable += `<tr><td>${result.ip}</td><td class="${resultClass}">${result.reachable ? 'Reachable' : 'Unreachable'}</td></tr>`;
+                            });
+                            resultsTable += '</tbody></table>';
+                            resultsBody.append(resultsTable);
+                        } else {
+                            resultsBody.html(`<p class="text-danger">${response.message}</p>`);
+                        }
+                        $('#arpPingModal').modal('show');
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.error('Error pinging ARP devices:', textStatus, errorThrown);
+                        alert('An error occurred while pinging ARP devices. Please check the console for more details.');
                     }
                 });
             });
         });
     </script>
 </body>
-
 </html>
