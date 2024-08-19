@@ -194,67 +194,149 @@
         </div>
     </div>
 
-    <!-- Broadcast Results Modal -->
-    <div class="modal fade" id="broadcastResultsModal" tabindex="-1" role="dialog" aria-labelledby="broadcastResultsModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="broadcastResultsModalLabel">New Devices Found</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+<!-- Broadcast Results Modal -->
+<div class="modal fade" id="broadcastResultsModal" tabindex="-1" role="dialog" aria-labelledby="broadcastResultsModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="broadcastResultsModalLabel">New Devices Found</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="new-devices-container">
+                    <!-- New devices will be populated here -->
                 </div>
-                <div class="modal-body">
-                    <div id="new-devices-container">
-                        <!-- New devices will be populated here -->
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
+</div>
+
+
+
+<!-- Add Device Form Modal -->
+<div class="modal fade" id="addDeviceModal" tabindex="-1" role="dialog" aria-labelledby="addDeviceModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addDeviceModalLabel">Add Device</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="add-device-form">
+                    <input type="hidden" id="device-host" name="host" value="">
+                    <div class="form-group">
+                        <label for="device-name">Name</label>
+                        <input type="text" class="form-control" id="device-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="device-username">Username</label>
+                        <input type="text" class="form-control" id="device-username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="device-password">Password</label>
+                        <input type="password" class="form-control" id="device-password" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="device-type">Device Type</label>
+                        <select class="form-control" id="device-type" name="deviceType" required>
+                            <option value="router">Router</option>
+                            <option value="switch">Switch</option>
+                            <option value="vpcs">VPCS</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Device</button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script>
-        $(document).ready(function () {
-            function loadDevices() {
-                $.ajax({
-                    url: '/ping_devices',
-                    type: 'GET',
-                    success: function (response) {
-                        $('#devices-container').empty();
-                        response.forEach(device => {
-                            let dotClass = device.status ? 'green-dot' : 'red-dot';
-                            let statusText = device.status ? 'Online' : 'Offline';
-                            let deviceCard = `
-                                <div class="device-card">
-                                    <div class="device-status">
-                                        <span class="dot ${dotClass}"></span>
-                                        <span>${device.host} (${statusText})</span>
-                                    </div>
-                                    <button class="btn btn-primary connect-btn" data-host="${device.host}">Connect</button>
+<script>
+    $(document).ready(function () {
+        function loadDevices() {
+            $.ajax({
+                url: '/ping_devices',
+                type: 'GET',
+                success: function (response) {
+                    $('#devices-container').empty();
+                    response.forEach(device => {
+                        let dotClass = device.status ? 'green-dot' : 'red-dot';
+                        let statusText = device.status ? 'Online' : 'Offline';
+                        let deviceCard = `
+                            <div class="device-card">
+                                <div class="device-status">
+                                    <span class="dot ${dotClass}"></span>
+                                    <span>${device.host} (${statusText})</span>
                                 </div>
-                            `;
-                            $('#devices-container').append(deviceCard);
-                        });
+                                <button class="btn btn-primary connect-btn" data-host="${device.host}">Connect</button>
+                            </div>
+                        `;
+                        $('#devices-container').append(deviceCard);
+                    });
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error loading devices:', textStatus, errorThrown);
+                    alert('An error occurred while loading devices. Please check the console for more details.');
+                }
+            });
+        }
+
+        // Load devices initially
+        loadDevices();
+
+        // Set up polling every 5 seconds (5000 milliseconds)
+        setInterval(loadDevices, 5000);
+
+        $('#traceroute-btn').click(function () {
+            let sourceIp = $('#source-ip').val();
+            let destinationIp = $('#destination-ip').val();
+
+            if (sourceIp && destinationIp) {
+                $.ajax({
+                    url: '/traceroute',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ source: sourceIp, destination: destinationIp }),
+                    success: function (response) {
+                        if (response.status === 'success') {
+                            let traceOutput = '<h6>Traceroute Result:</h6>';
+                            traceOutput += '<pre>';
+                            response.trace.forEach(hop => {
+                                traceOutput += `Hop ${hop.hop}: ${hop.ip} (${hop.device_type})\n`;
+                            });
+                            traceOutput += '</pre>';
+
+                            // Display the traceroute result in the new trace output container
+                            $('#trace-output-container').html(traceOutput);
+                        } else {
+                            alert('Traceroute failed: ' + response.message);
+                        }
                     },
                     error: function (jqXHR, textStatus, errorThrown) {
-                        console.error('Error loading devices:', textStatus, errorThrown);
-                        alert('An error occurred while loading devices. Please check the console for more details.');
+                        console.error('Error performing traceroute:', textStatus, errorThrown);
+                        alert('An error occurred while performing traceroute. Please check the console for more details.');
                     }
                 });
+            } else {
+                alert('Please enter both source and destination IP addresses.');
             }
+        });
 
-            // Load devices initially
-            loadDevices();
-
-            // Set up polling every 5 seconds (5000 milliseconds)
-            setInterval(loadDevices, 5000);
-
-            $(document).on('click', '.connect-btn', function (event) {
+        $(document).on('click', '.connect-btn', function (event) {
             event.preventDefault();
             let host = $(this).attr('data-host');
             let password = prompt('Please enter the SSH password:');
@@ -280,125 +362,160 @@
                         alert('An error occurred while starting the SSH session. Please check the console for more details.');
                     }
                 });
-                } else {
-                    alert('Connection canceled: Password is required.');
-                }
-            });
-
-
-            $(document).on('click', '.operation-btn', function () {
-                let host = $('#operationsModal').data('host');
-                let operation = $(this).attr('data-operation');
-                let button = $(this);
-                button.addClass('btn-loading loading');
-
-                $.ajax({
-                    url: '/perform_operation',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ host: host, operation: operation }),
-                    success: function (response) {
-                        button.removeClass('loading');
-                        if (response.status === 'success') {
-                            let outputHtml = '';
-                            if (Array.isArray(response.output)) {
-                                // Handle structured output
-                                outputHtml += '<h6>' + operation + ' Output:</h6>';
-                                outputHtml += '<table><thead><tr>';
-                                Object.keys(response.output[0]).forEach(key => {
-                                    outputHtml += '<th>' + key + '</th>';
-                                });
-                                outputHtml += '</tr></thead><tbody>';
-                                response.output.forEach(row => {
-                                    outputHtml += '<tr>';
-                                    Object.values(row).forEach(value => {
-                                        outputHtml += '<td>' + value + '</td>';
-                                    });
-                                    outputHtml += '</tr>';
-                                });
-                                outputHtml += '</tbody></table>';
-                            } else {
-                                // Handle plain text output
-                                outputHtml += '<h6>' + operation + ' Output:</h6>';
-                                outputHtml += '<pre>' + response.output + '</pre>';
-                            }
-                            $('#output-container').append(outputHtml);
-                        } else {
-                            console.error('Operation failed:', response.message);
-                            alert('Operation failed: ' + response.message);
-                        }
-                    },
-                    error: function (jqXHR, textStatus, errorThrown) {
-                        button.removeClass('loading');
-                        console.error('Error performing operation:', textStatus, errorThrown);
-                        alert('An error occurred while performing the operation. Please check the console for more details.');
-                    }
-                });
-            });
-
-           $('#broadcast-btn').on('click', function () {
-            $.ajax({
-                url: '/broadcast_devices',
-                type: 'GET',
-                success: function (response) {
-                    if (response.status === 'success') {
-                        let devices = response.new_devices;
-                        if (devices && devices.length > 0) {
-                            $('#new-devices-container').empty();
-                            devices.forEach(device => {
-                                let deviceItem = `
-                                    <div class="device-item">
-                                        <span>${device.host}</span>
-                                        <button class="btn btn-success add-device-btn" data-host="${device.host}">Add</button>
-                                    </div>
-                                `;
-                                $('#new-devices-container').append(deviceItem);
-                            });
-                            $('#broadcastResultsModal').modal('show');
-                        } else {
-                            alert('No new devices found.');
-                        }
-                    } else {
-                        alert('Broadcast failed: ' + response.message);
-                    }
-                },
-                error: function (jqXHR, textStatus, errorThrown) {
-                    console.error('Error during broadcast:', textStatus, errorThrown);
-                    alert('An error occurred during broadcast. Please check the console for more details.');
-                }
-                });
-            });
-
-
-            $(document).on('click', '.add-device-btn', function () {
-                let host = $(this).attr('data-host');
-                let deviceType = $(this).attr('data-device-type');
-                let addButton = $(this);
-                $.ajax({
-                    url: '/add_device',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ host: host, deviceType: deviceType }),
-                    success: function (response) {
-                        if (response.status === 'success') {
-                            addButton.closest('.device-item').remove();
-                        } else {
-                            console.error('Failed to add device:', response.message);
-                            alert('Failed to add device: ' + response.message);
-                        }
-                    },
-                    error: function (jqXHR, textStatus, errorThrown) {
-                        console.error('Error adding device:', textStatus, errorThrown);
-                        alert('An error occurred while adding the device. Please check the console for more details.');
-                    }
-                });
-            });
-
-            $('#cancel-btn').click(function () {
-                $('#operationsModal').modal('hide');
-            });
+            } else {
+                alert('Connection canceled: Password is required.');
+            }
         });
-    </script>
+
+$(document).on('click', '.operation-btn', function () {
+    let host = $('#operationsModal').data('host');
+    let operation = $(this).attr('data-operation');
+    let button = $(this);
+    button.addClass('btn-loading loading');
+
+    $.ajax({
+        url: '/perform_operation',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ host: host, operation: operation }),
+        success: function (response) {
+            button.removeClass('loading');
+            if (response.status === 'success') {
+                let outputHtml = '';
+
+                if (Array.isArray(response.output)) {
+                    // Handle structured output
+                    outputHtml += '<h6>' + operation + ' Output:</h6>';
+                    outputHtml += '<table class="table"><thead><tr>';
+                    Object.keys(response.output[0]).forEach(key => {
+                        outputHtml += '<th>' + key + '</th>';
+                    });
+                    outputHtml += '</tr></thead><tbody>';
+                    response.output.forEach(row => {
+                        outputHtml += '<tr>';
+                        Object.values(row).forEach(value => {
+                            outputHtml += '<td>' + value + '</td>';
+                        });
+                        outputHtml += '</tr>';
+                    });
+                    outputHtml += '</tbody></table>';
+                } else {
+                    // Handle plain text output
+                    outputHtml += '<h6>' + operation + ' Output:</h6>';
+                    outputHtml += '<pre>' + response.output + '</pre>';
+                }
+
+                // Clear previous output and append new output
+                $('#output-container').empty().append(outputHtml);
+            } else {
+                console.error('Operation failed:', response.message);
+                alert('Operation failed: ' + response.message);
+            }
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            button.removeClass('loading');
+            console.error('Error performing operation:', textStatus, errorThrown);
+            alert('An error occurred while performing the operation. Please check the console for more details.');
+        }
+    });
+});
+
+
+        $(document).ready(function () {
+    // Load devices initially
+    loadDevices();
+
+    // Set up polling every 5 seconds (5000 milliseconds)
+    setInterval(loadDevices, 5000);
+
+    $('#broadcast-btn').on('click', function () {
+        $.ajax({
+            url: '/broadcast_devices',
+            type: 'GET',
+            success: function (response) {
+                if (response.status === 'success') {
+                    let devices = response.new_devices;
+                    if (devices && devices.length > 0) {
+                        $('#new-devices-container').empty();
+                        devices.forEach((device, index) => {
+                            let deviceItem = `
+                                <div class="device-item" data-index="${index}">
+                                    <span>${device}</span>
+                                    <button class="btn btn-success add-device-btn" data-host="${device}">Add</button>
+                                </div>
+                            `;
+                            $('#new-devices-container').append(deviceItem);
+                        });
+                        $('#broadcastResultsModal').modal('show');
+                    } else {
+                        alert('No new devices found.');
+                    }
+                } else {
+                    alert('Broadcast failed: ' + response.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error('Error during broadcast:', textStatus, errorThrown);
+                alert('An error occurred during broadcast. Please check the console for more details.');
+            }
+        });
+    });
+
+    // Handle "Add" button click in the broadcast results modal
+    $(document).on('click', '.add-device-btn', function () {
+        let host = $(this).data('host'); // Get the host from the button's data attribute
+        $('#device-host').val(host); // Set the hidden input field with the host value
+        $('#addDeviceModal').modal('show');
+    });
+
+    // Handle form submission
+    $('#add-device-form').submit(function (event) {
+        event.preventDefault();
+
+        // Collect form data
+        let deviceData = {
+            deviceType: $('#device-type').val(),
+            host: $('#device-host').val(),
+            name: $('#device-name').val(),
+            username: $('#device-username').val(),
+            password: $('#device-password').val()
+        };
+
+        console.log('Sending device data:', deviceData); // Debug: Print deviceData
+
+        $.ajax({
+            url: '/add_device',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(deviceData),
+            success: function (response) {
+                if (response.status === 'success') {
+                    $('#addDeviceModal').modal('hide');
+                    alert('Device added successfully');
+                    loadDevices();
+                } else {
+                    alert('Failed to add device: ' + response.message);
+                }
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error('Error adding device:', textStatus, errorThrown);
+                alert('An error occurred while adding the device. Please check the console for more details.');
+            }
+        });
+    });
+
+    // Handle cancel button click
+    $('#cancel-btn').click(function () {
+        $('#operationsModal').modal('hide');
+    });
+});
+
+
+        $('#cancel-btn').click(function () {
+            $('#operationsModal').modal('hide');
+        });
+    });
+</script>
 </body>
 
 </html>

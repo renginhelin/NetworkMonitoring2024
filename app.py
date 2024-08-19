@@ -1,3 +1,4 @@
+import re
 from flask import Flask, jsonify, render_template, request
 import subprocess
 import platform
@@ -6,8 +7,12 @@ import threading
 import deneme
 import ipaddress
 
+import router_service
+
 app = Flask(__name__)
-db = deneme.db_operations("devices", "network")
+router_db = router_service.router_service("devices")
+host_db = deneme.db_operations("devices", "host")
+
 
 class NetmikoHandler:
     def __init__(self, device):
@@ -57,11 +62,30 @@ class NetmikoHandler:
         except netmiko.exceptions.NetMikoTimeoutException:
             return "Timeout"
 
+    def get_hostname(self):
+        try:
+            output = self.connection.send_command("show running-config | include hostname")
+            hostname = output.split("hostname ")[1].strip()
+            return hostname
+        except Exception as e:
+            return f"Error retrieving hostname: {e}"
+
+    def get_interface_ips(self):
+        """Fetch all IP addresses from 'show ip interface brief' output."""
+        command = "show ip interface brief"
+        output = self.send_command(command)
+        ip_addresses = re.findall(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', output)
+        print(ip_addresses)
+        return ip_addresses
+
+
 ssh_handlers = {}
+
 
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/ping_devices', methods=['GET'])
 def ping_devices():
@@ -88,12 +112,12 @@ def ping_devices():
             print(f"An error occurred while pinging {ip}: {e}")
             results[index] = {"host": ip, "status": False}
 
-    devices = db.find_documents()
+    devices = router_db.get_routers()
     threads = []
     results = [{} for _ in devices]
 
     for i, device in enumerate(devices):
-        thread = threading.Thread(target=ping_device, args=(device['host'], results, i))
+        thread = threading.Thread(target=ping_device, args=(device["connection"]['host'], results, i))
         thread.start()
         threads.append(thread)
 
@@ -101,6 +125,7 @@ def ping_devices():
         thread.join()
     sorted_results = sorted(results, key=lambda d: d['host'])  # Sorting by 'host'
     return jsonify(sorted_results)
+
 
 @app.route('/broadcast_devices', methods=['GET'])
 def broadcast():
@@ -120,13 +145,13 @@ def broadcast():
                 if "100% packet loss" in output.stdout or "unreachable" in output.stdout:
                     return
 
-            new_device = {"host": ip, "device_type": "cisco_ios", "username": "admin", "password": "cisco123"}
+            new_device = ip
             new_devices.append(new_device)
         except Exception as e:
             print(f"An error occurred while pinging {ip}: {e}")
 
     subnet = ipaddress.ip_network('10.10.10.0/24', strict=False)
-    existing_devices = {device['host'] for device in db.find_documents()}
+    existing_devices = {device["connection"]['host'] for device in router_db.get_routers()}
     new_devices = []
     threads = []
 
@@ -142,6 +167,7 @@ def broadcast():
         thread.join()
 
     return jsonify({"status": "success", "new_devices": new_devices})
+
 
 @app.route('/perform_operation', methods=['POST'])
 def perform_operation():
@@ -167,6 +193,67 @@ def perform_operation():
     else:
         return jsonify({"status": "error", "message": "No active SSH session or connection not established"})
 
+
+@app.route('/traceroute', methods=['POST'])
+def traceroute():
+    def parse_next_hop(output):
+        match = re.search(r'\b(\d{1,3}\.){3}\d{1,3}\b', output)
+        if match:
+            return match.group()
+        return None
+
+    devices = router_db.get_routers()
+    vpcs = host_db.find_documents()
+    data = request.json
+    source = data.get('source')
+    destination = data.get('destination')
+
+    trace_result = []
+    current_hop = 1
+    current_ip = source
+
+    while current_ip != destination:
+        current_device = next((device for device in devices if device['host'] == current_ip), None)
+
+        if current_device:
+            ssh_handler = NetmikoHandler(current_device)
+            ssh_handler.connect()
+            if ssh_handler and ssh_handler.connection:
+                command = f"traceroute {destination} ttl 1 2"
+                output = ssh_handler.send_command(command)
+                next_hop_ip = parse_next_hop(output)
+
+                if next_hop_ip:
+                    trace_result.append({
+                        "hop": current_hop,
+                        "ip": current_ip,
+                        "device_type": "Router"
+                    })
+                    current_ip = next_hop_ip
+                else:
+                    trace_result.append({
+                        "hop": current_hop,
+                        "ip": current_ip,
+                        "device_type": "Unknown"
+                    })
+                    break
+
+        # Check if the current_ip matches any host in vpcs
+        current_vpcs = next((vpc for vpc in vpcs if vpc['host'] == current_ip), None)
+
+        if current_vpcs:
+            trace_result.append({
+                "hop": current_hop,
+                "ip": current_ip,
+                "device_type": "VPCS"
+            })
+            break
+
+        current_hop += 1
+
+    return jsonify({"status": "success", "trace": trace_result})
+
+
 def format_interface_brief(output):
     lines = output.splitlines()
     headers = ["Interface", "IP-Address", "OK?", "Method", "Status", "Protocol"]
@@ -179,6 +266,7 @@ def format_interface_brief(output):
                  '</tbody></table>'
     return table_html
 
+
 def format_arp_table(output):
     lines = output.splitlines()
     headers = ["Protocol", "Address", "Age (min)", "Hardware Addr", "Type", "Interface"]
@@ -190,6 +278,7 @@ def format_arp_table(output):
                  ''.join(f'<tr>{"".join(f"<td>{col}</td>" for col in row)}</tr>' for row in rows) + \
                  '</tbody></table>'
     return table_html
+
 
 @app.route('/cancel_ssh', methods=['POST'])
 def cancel_ssh():
@@ -205,19 +294,19 @@ def cancel_ssh():
 
 @app.route('/start_ssh', methods=['POST'])
 def start_ssh():
-    devices = db.find_documents()
+    devices = router_db.get_routers()
     data = request.json
     host = data.get("host")
     password = data.get("password")
 
     # Fetch the device from the database
-    device = next((device for device in devices if device['host'] == host), None)
+    connection_json = next((device["connection"] for device in devices if device["connection"]["host"] == host), None)
 
-    if device:
+    if connection_json:
         # Update the device dictionary with the provided password
-        device['password'] = password
+        connection_json['password'] = password
 
-        ssh_handler = NetmikoHandler(device)
+        ssh_handler = NetmikoHandler(connection_json)
         ssh_handler.connect()
 
         if ssh_handler.connection:
@@ -232,10 +321,47 @@ def start_ssh():
 @app.route('/add_device', methods=['POST'])
 def add_device():
     data = request.json
-    host = data.get("host")
-    new_device = {"host": host, "device_type": "cisco_ios", "username": "admin", "password": "cisco123"}
-    db.insert_document(new_device)
-    return jsonify({"status": "success"}), 200
+    device_type = data.get("deviceType")
+
+    if device_type == "router":
+        host = data.get("host")
+        name = data.get("name")
+        username = data.get("username")
+        password = data.get("password")
+
+        if not all([host, name, username, password]):
+            return jsonify({"status": "error", "message": "Missing required fields for router"}), 400
+
+        connection = {"device_type": "cisco_ios", "host": host,
+                      "username": username, "password": password}
+
+        ssh_handler = NetmikoHandler(connection)
+        ssh_handler.connect()
+        print("hello")
+        print(ssh_handler.connection)
+        if ssh_handler.connection:
+            print("hello2")
+            new_device = {
+                "name": name,
+                "connection": connection,
+                "interface": []
+            }
+            result = router_db.add_router(new_device)
+            ssh_handler.disconnect()
+
+            return jsonify({"status": "success", "result": result}), 200
+        else:
+            return jsonify({"status": "error", "message": "Failed to connect to the device"}), 500
+
+    elif device_type == "switch":
+        # Handle switch-specific logic here
+        pass
+    elif device_type == "vpcs":
+        # Handle VPCS-specific logic here
+        pass
+    else:
+        return jsonify({"status": "error", "message": "Invalid device type"}), 400
+
 
 
 if __name__ == "__main__":
