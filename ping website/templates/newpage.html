@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subnet Explorer</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+        .container {
+            margin-top: 50px;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .subnet-item {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .btn-broadcast {
+            font-size: 1rem;
+            padding: 10px 20px;
+            border-radius: 5px;
+        }
+        .device-list {
+            margin-top: 30px;
+        }
+        .device-item {
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <ul class="nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="/broadcast">Subnet Explorer</a>
+                </li>
+            </ul>
+        </nav>
+        <h1 class="text-center mb-4">Subnet Explorer</h1>
+        <div class="subnet-list">
+            {% for subnet in subnets %}
+            <div class="subnet-item">
+                <span>{{ subnet.subnet }}</span>
+                <button class="btn btn-primary btn-broadcast" onclick="explore('{{ subnet.subnet }}')">Explore</button>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="device-list" id="device-list" style="display:none;">
+            <h3 class="text-center">Devices Found</h3>
+            <div id="devices-container"></div>
+        </div>
+    </div>
+
+    <script>
+        function explore(subnet) {
+            fetch(`/broadcast_devices?subnet=${encodeURIComponent(subnet)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const deviceList = document.getElementById('device-list');
+                    const devicesContainer = document.getElementById('devices-container');
+
+                    devicesContainer.innerHTML = '';
+
+                    if (data.status === 'success') {
+                        data.new_devices.forEach(device => {
+                            const deviceItem = document.createElement('div');
+                            deviceItem.className = 'device-item';
+                            deviceItem.innerHTML = `<span>${device.host}</span>`;
+                            devicesContainer.appendChild(deviceItem);
+                        });
+                        deviceList.style.display = 'block';
+                    } else {
+                        alert('Failed to retrieve devices.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred.');
+                });
+        }
+    </script>
+</body>
+</html>
