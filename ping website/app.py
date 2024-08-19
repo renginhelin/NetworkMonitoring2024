@@ -2,6 +2,8 @@ from flask import Flask, jsonify, render_template, request
 import subprocess
 import platform
 import netmiko
+import ipaddress
+import threading
 
 app = Flask(__name__)
 app.secret_key = '123'  # Required for session management
@@ -55,7 +57,7 @@ class NetmikoHandler:
             return "Timeout"
 
 devices = [
-    {"device_type": 'cisco_ios', "host": '192.168.111.102', "username": 'admin', "password": 'admin'}
+    {"device_type": 'cisco_ios', "host": '192.168.199.102', "username": 'admin', "password": 'admin'}
 ]
 
 ssh_handlers = {}
@@ -63,6 +65,10 @@ ssh_handlers = {}
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/broadcast')
+def device_configuration_page():
+    return render_template('newpage.html', subnets=subnets) 
 
 @app.route('/ping_devices', methods=['GET'])
 def ping_devices():
@@ -211,6 +217,52 @@ def start_ssh():
             return jsonify({"status": "error", "message": "SSH connection failed"}), 500
     else:
         return jsonify({"status": "error", "message": "Device not found"}), 404
+    
+# Sample data: list of subnets
+subnets = [
+    {'id': 1, 'subnet': '192.168.199.0/24'}
+]
+    
+@app.route('/broadcast_devices', methods=['GET'])
+def broadcast_devices():
+    def ping_device(ip, new_devices):
+        try:
+            if platform.system() == "Windows":
+                command = ["ping", "-n", "1", "-w", "1000", ip]
+            else:
+                command = ["ping", "-c", "1", "-W", "1", ip]
+
+            output = subprocess.run(command, capture_output=True, text=True)
+
+            if platform.system() == "Windows":
+                if "Request timed out" in output.stdout or "Destination host unreachable" in output.stdout:
+                    return
+            else:
+                if "100% packet loss" in output.stdout or "unreachable" in output.stdout:
+                    return
+
+            new_device = {"host": ip, "device_type": "cisco_ios", "username": "admin", "password": "admin"}
+            new_devices.append(new_device)
+        except Exception as e:
+            print(f"An error occurred while pinging {ip}: {e}")
+
+    subnet = request.args.get('subnet')
+    if not subnet:
+        return jsonify({"status": "error", "message": "Subnet not provided"}), 400
+
+    subnet = ipaddress.ip_network(subnet, strict=False)
+    new_devices = []
+    threads = []
+
+    for ip in subnet.hosts():
+        ip_str = str(ip)
+        thread = threading.Thread(target=ping_device, args=(ip_str, new_devices))
+        thread.start()
+        threads.append(thread)
+    for thread in threads:
+        thread.join()
+
+    return jsonify({"status": "success", "new_devices": new_devices})
 
 if __name__ == "__main__":
     app.run(debug=True)
