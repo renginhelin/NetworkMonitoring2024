@@ -4,9 +4,18 @@ import platform
 import netmiko
 import ipaddress
 import threading
+from netmiko import ConnectHandler
+from netaddr import IPNetwork
 
 app = Flask(__name__)
 app.secret_key = '123'  # Required for session management
+
+# Configuration
+hostname = '192.168.199.102'
+port = 22
+username = 'admin'
+password = 'admin'
+device_type = 'cisco_ios'
 
 class NetmikoHandler:
     def __init__(self, device):
@@ -57,7 +66,7 @@ class NetmikoHandler:
             return "Timeout"
 
 devices = [
-    {"device_type": 'cisco_ios', "host": '192.168.199.102', "username": 'admin', "password": 'admin'}
+    {"device_type": device_type, "host": hostname, "username": username, "password": password}
 ]
 
 ssh_handlers = {}
@@ -68,6 +77,7 @@ def index():
 
 @app.route('/broadcast')
 def device_configuration_page():
+    subnets = retrieve_subnets()
     return render_template('newpage.html', subnets=subnets) 
 
 @app.route('/ping_devices', methods=['GET'])
@@ -108,9 +118,9 @@ def ping_arp_devices():
     def ping_device(ip):
         try:
             if platform.system() == "Windows":
-                command = ["ping", "-n", "1", "-w", "1000", ip]
+                command = ["ping", "-n", "1", "-w", "2000", ip]
             else:
-                command = ["ping", "-c", "1", "-W", "1", ip]
+                command = ["ping", "-c", "1", "-W", "2", ip]
 
             output = subprocess.run(command, capture_output=True, text=True)
 
@@ -217,20 +227,72 @@ def start_ssh():
             return jsonify({"status": "error", "message": "SSH connection failed"}), 500
     else:
         return jsonify({"status": "error", "message": "Device not found"}), 404
+
+def get_interface_ip_addresses(ssh_client):
+    command = "show running-config"
+    output = ssh_client.send_command(command)
+    lines = output.splitlines()
     
-# Sample data: list of subnets
-subnets = [
-    {'id': 1, 'subnet': '192.168.199.0/24'}
-]
+    interface_ips = {}
+    current_interface = None
+    
+    for line in lines:
+        if line.startswith('interface'):
+            current_interface = line.split()[-1]
+        elif current_interface and 'ip address' in line:
+            parts = line.split()
+            ip_address = parts[2]
+            subnet_mask = parts[3]
+
+            interface_ips[current_interface] = (ip_address, subnet_mask)
+            current_interface = None
+    
+    return interface_ips
+
+def subnet_mask_to_prefix(subnet_mask):
+    try:
+        return IPNetwork(f'0.0.0.0/{subnet_mask}').prefixlen
+    except Exception as e:
+        print(f"Error converting subnet mask {subnet_mask} to prefix length: {e}")
+        return None
+
+def retrieve_subnets():
+    device = {
+        'device_type': device_type,
+        'host': hostname,
+        'username': username,
+        'password': password,
+    }
+
+    with ConnectHandler(**device) as ssh_client:
+        interface_ips = get_interface_ip_addresses(ssh_client)
+        all_subnets = []
+        subnet_id = 1
+
+        for interface, (ip, subnet_mask) in interface_ips.items():
+            try:
+                prefix_len = subnet_mask_to_prefix(subnet_mask)
+                if prefix_len is None:
+                    continue
+
+                network = IPNetwork(f'{ip}/{prefix_len}')
+                for subnet in network.subnet(network.prefixlen):
+                    all_subnets.append({'id': subnet_id, 'subnet': str(subnet)})
+                    subnet_id += 1
+            
+            except Exception as e:
+                print(f"Error processing IP {ip} with mask {subnet_mask}: {e}")
+
+    return all_subnets
     
 @app.route('/broadcast_devices', methods=['GET'])
 def broadcast_devices():
     def ping_device(ip, new_devices):
         try:
             if platform.system() == "Windows":
-                command = ["ping", "-n", "1", "-w", "1000", ip]
+                command = ["ping", "-n", "1", "-w", "2000", ip]
             else:
-                command = ["ping", "-c", "1", "-W", "1", ip]
+                command = ["ping", "-c", "1", "-W", "2", ip]
 
             output = subprocess.run(command, capture_output=True, text=True)
 
