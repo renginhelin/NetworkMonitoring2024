@@ -89,8 +89,35 @@
             <h3 class="text-center">Devices Found</h3>
             <div id="devices-container"></div>
         </div>
-    </div>
+        
+        <!-- Add a modal for displaying traceroute results -->
+        <div class="modal fade" id="tracerouteModal" tabindex="-1" aria-labelledby="tracerouteModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="tracerouteModalLabel">Traceroute Results</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="traceroute-output"></div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Add a spinner template -->
+        <div id="spinner-template" style="display:none;">
+            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Tracing...
+        </div>
+        
 
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         function explore(subnet) {
             fetch(`/broadcast_devices?subnet=${encodeURIComponent(subnet)}`)
@@ -98,14 +125,16 @@
                 .then(data => {
                     const deviceList = document.getElementById('device-list');
                     const devicesContainer = document.getElementById('devices-container');
-
+    
                     devicesContainer.innerHTML = '';
-
+    
                     if (data.status === 'success') {
                         data.new_devices.forEach(device => {
                             const deviceItem = document.createElement('div');
                             deviceItem.className = 'device-item';
-                            deviceItem.innerHTML = `<span>${device.host}</span>`;
+                            deviceItem.innerHTML = `
+                                <span>${device.host}</span>
+                                <button class="btn btn-info btn-traceroute" onclick="traceroute(this, '${device.host}')">Traceroute</button>`;
                             devicesContainer.appendChild(deviceItem);
                         });
                         deviceList.style.display = 'block';
@@ -117,6 +146,44 @@
                     console.error('Error:', error);
                     alert('An error occurred.');
                 });
+        }
+    
+        function traceroute(button, ip) {
+            const originalText = button.innerHTML;
+            const spinner = document.getElementById('spinner-template').innerHTML;
+    
+            // Change button to loading state
+            button.disabled = true;
+            button.innerHTML = spinner;
+    
+            fetch('/traceroute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ip: ip }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Revert button to original state
+                button.disabled = false;
+                button.innerHTML = originalText;
+    
+                if (data.status === 'success') {
+                    document.getElementById('traceroute-output').innerText = data.output;
+                    $('#tracerouteModal').modal('show');
+                } else {
+                    alert('Traceroute failed: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred.');
+    
+                // Revert button to original state
+                button.disabled = false;
+                button.innerHTML = originalText;
+            });
         }
     </script>
 </body>
