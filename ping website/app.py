@@ -378,5 +378,25 @@ def broadcast_devices():
 
     return jsonify({"status": "success", "new_devices": new_devices})
 
+@app.route('/traceroute', methods=['POST'])
+@login_required
+def traceroute():
+    data = request.json
+    ip_address = data.get('ip')
+    
+    if not ip_address:
+        return jsonify({"status": "error", "message": "IP address not provided"}), 400
+
+    try:
+        if platform.system() == "Windows":
+            command = ["tracert", ip_address]
+        else:
+            command = ["traceroute", ip_address]
+
+        output = subprocess.run(command, capture_output=True, text=True)
+        return jsonify({"status": "success", "output": output.stdout})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(debug=True)
