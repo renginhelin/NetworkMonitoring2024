@@ -1,4 +1,5 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, redirect, url_for, session, flash
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import subprocess
 import platform
 import netmiko
@@ -16,6 +17,26 @@ port = 22
 username = 'admin'
 password = 'admin'
 device_type = 'cisco_ios'
+
+# Flask-Login setup
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'  # Redirect to login page if not authenticated
+
+# Router Login
+users = {
+    username: {"password": password}
+}
+
+class User(UserMixin):
+    def __init__(self, username):
+        self.id = username
+
+@login_manager.user_loader
+def load_user(user_id):
+    if user_id in users:
+        return User(user_id)
+    return None
 
 class NetmikoHandler:
     def __init__(self, device):
@@ -71,16 +92,46 @@ devices = [
 
 ssh_handlers = {}
 
+# Login route
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        user = users.get(username)
+        if user and user['password'] == password:
+            user_obj = User(username)
+            login_user(user_obj)
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid credentials. Please try again.')
+            return redirect(url_for('login'))
+    
+    return render_template('login.html')
+
+# Logout route
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+# Modify the index route to require login
 @app.route('/')
+@login_required
 def index():
+    print(f"User authenticated: {current_user.is_authenticated}")
     return render_template('index.html')
 
 @app.route('/broadcast')
+@login_required
 def device_configuration_page():
     subnets = retrieve_subnets()
-    return render_template('newpage.html', subnets=subnets) 
+    return render_template('newpage.html', subnets=subnets)
 
 @app.route('/ping_devices', methods=['GET'])
+@login_required
 def ping_devices():
     def ping_device(ip):
         try:
@@ -107,6 +158,7 @@ def ping_devices():
     return jsonify(available_devices)
 
 @app.route('/ping_arp_devices', methods=['POST'])
+@login_required
 def ping_arp_devices():
     data = request.json
     host = data.get('host')
@@ -149,6 +201,7 @@ def ping_arp_devices():
     return jsonify({"status": "success", "results": arp_results})
 
 @app.route('/perform_operation', methods=['POST'])
+@login_required
 def perform_operation():
     data = request.json
     host = data.get('host')
@@ -158,7 +211,6 @@ def perform_operation():
     if ssh_handler and ssh_handler.connection:
         if operation == 'show_interface_brief':
             output = ssh_handler.send_command("show ip interface brief")
-            # Format as HTML table for the interface brief
             output = format_interface_brief(output)
         elif operation == 'show_inventory':
             output = ssh_handler.show_inventory()
@@ -166,7 +218,6 @@ def perform_operation():
             output = ssh_handler.show_hardware_and_version()
         elif operation == 'show_arp_table':
             output = ssh_handler.send_command("show arp")
-            # Format as HTML table for the ARP table
             output = format_arp_table(output)
         else:
             output = "Invalid operation"
@@ -175,7 +226,6 @@ def perform_operation():
         return jsonify({"status": "error", "message": "No active SSH session or connection not established"})
 
 def format_interface_brief(output):
-    # Format output into an HTML table for show ip interface brief
     lines = output.splitlines()
     headers = ["Interface", "IP-Address", "OK?", "Method", "Status", "Protocol"]
     rows = [line.split() for line in lines[1:] if line.strip()]
@@ -188,7 +238,6 @@ def format_interface_brief(output):
     return table_html
 
 def format_arp_table(output):
-    # Format output into an HTML table for show arp
     lines = output.splitlines()
     headers = ["Protocol", "Address", "Age (min)", "Hardware Addr", "Type", "Interface"]
     rows = [line.split() for line in lines[1:] if line.strip()]
@@ -201,6 +250,7 @@ def format_arp_table(output):
     return table_html
 
 @app.route('/cancel_ssh', methods=['POST'])
+@login_required
 def cancel_ssh():
     data = request.json
     host = data.get('host')
@@ -212,6 +262,7 @@ def cancel_ssh():
         return jsonify({"status": "error", "message": "No active SSH session"})
 
 @app.route('/start_ssh', methods=['POST'])
+@login_required
 def start_ssh():
     data = request.json
     host = data.get("host")
@@ -286,6 +337,7 @@ def retrieve_subnets():
     return all_subnets
     
 @app.route('/broadcast_devices', methods=['GET'])
+@login_required
 def broadcast_devices():
     def ping_device(ip, new_devices):
         try:
