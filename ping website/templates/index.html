@@ -259,7 +259,13 @@
             });
 
             $(document).on('click', '.ping-arp-btn', function () {
-                let host = $(this).data('host');
+                let button = $(this);
+                let originalText = button.text();
+                let host = button.data('host');
+    
+                // Change button to loading state
+                button.prop('disabled', true).text('Pinging...');
+    
                 $.ajax({
                     url: '/ping_arp_devices',
                     type: 'POST',
@@ -284,6 +290,10 @@
                     error: function (jqXHR, textStatus, errorThrown) {
                         console.error('Error pinging ARP devices:', textStatus, errorThrown);
                         alert('An error occurred while pinging ARP devices. Please check the console for more details.');
+                    },
+                    complete: function () {
+                        // Revert button to original state
+                        button.prop('disabled', false).text(originalText);
                     }
                 });
             });
