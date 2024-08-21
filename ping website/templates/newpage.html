@@ -120,6 +120,23 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         function explore(subnet) {
+            const exploreButtons = document.querySelectorAll('.btn-broadcast');
+            let button;
+    
+            // Find the clicked button
+            exploreButtons.forEach(btn => {
+                if (btn.innerText === 'Explore' && btn.getAttribute('onclick').includes(subnet)) {
+                    button = btn;
+                }
+            });
+    
+            const originalText = button.innerHTML;
+            const spinner = document.getElementById('spinner-template').innerHTML;
+    
+            // Change button to loading state
+            button.disabled = true;
+            button.innerHTML = spinner.replace('Tracing...', 'Exploring...');
+    
             fetch(`/broadcast_devices?subnet=${encodeURIComponent(subnet)}`)
                 .then(response => response.json())
                 .then(data => {
@@ -145,6 +162,11 @@
                 .catch(error => {
                     console.error('Error:', error);
                     alert('An error occurred.');
+                })
+                .finally(() => {
+                    // Revert button to original state
+                    button.disabled = false;
+                    button.innerHTML = originalText;
                 });
         }
     
