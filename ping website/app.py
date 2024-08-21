@@ -5,6 +5,8 @@ import platform
 import netmiko
 import ipaddress
 import threading
+import re
+import time
 from netmiko import ConnectHandler
 from netaddr import IPNetwork
 
@@ -17,6 +19,17 @@ port = 22
 username = 'admin'
 password = 'admin'
 device_type = 'cisco_ios'
+
+# Router connection details
+router = {
+    'device_type': device_type,
+    'host': hostname,
+    'username': username,
+    'password': password,
+    'port': port,
+    'secret': password,
+    'verbose': False
+}
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -92,6 +105,50 @@ devices = [
 
 ssh_handlers = {}
 
+# Dictionary to store throughput data for all interfaces
+throughput_data = {}
+
+def get_interfaces():
+    output = net_connect.send_command('show ip interface brief')
+    interfaces = re.findall(r'(\S+)\s+\d+\.\d+\.\d+\.\d+', output)
+    return interfaces
+
+def get_interface_rates(interface):
+    output = net_connect.send_command(f'show interface {interface}')
+    input_rate_match = re.search(r"5 minute input rate (\d+) bits/sec", output)
+    output_rate_match = re.search(r"5 minute output rate (\d+) bits/sec", output)
+
+    input_rate = int(input_rate_match.group(1)) if input_rate_match else 0
+    output_rate = int(output_rate_match.group(1)) if output_rate_match else 0
+
+    return input_rate, output_rate
+
+def collect_throughput_data():
+    minute = 0
+    interfaces = get_interfaces()
+    for interface in interfaces:
+        throughput_data[interface] = {
+            "time_intervals": [],
+            "input_throughputs": [],
+            "output_throughputs": []
+        }
+
+    while True:
+        for interface in interfaces:
+            input_rate, output_rate = get_interface_rates(interface)
+            throughput_data[interface]["time_intervals"].append(minute)
+            throughput_data[interface]["input_throughputs"].append(input_rate)
+            throughput_data[interface]["output_throughputs"].append(output_rate)
+        
+        minute += 3
+        time.sleep(3)
+
+# Start collecting throughput data in a background thread
+net_connect = ConnectHandler(**router)
+net_connect.enable()
+thread = threading.Thread(target=collect_throughput_data)
+thread.start()
+
 # Login route
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -116,6 +173,15 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('login'))
+
+@app.route('/throughput')
+def throughput():
+    return render_template('throughput.html')
+
+@app.route('/data')
+@login_required
+def data():
+    return jsonify(throughput_data)
 
 # Modify the index route to require login
 @app.route('/')
@@ -335,6 +401,7 @@ def retrieve_subnets():
                 print(f"Error processing IP {ip} with mask {subnet_mask}: {e}")
 
     return all_subnets
+
     
 @app.route('/broadcast_devices', methods=['GET'])
 @login_required
