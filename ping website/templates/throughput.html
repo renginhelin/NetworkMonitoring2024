@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interface Throughput Monitoring</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        #charts {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .chart-container {
+            width: 45%;
+            min-width: 300px;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            box-sizing: border-box;
+            height: 330px; /* Further reduced height */
+            overflow: hidden;
+        }
+
+        canvas {
+            max-width: 100%;
+            max-height: 100%;
+            height: auto;
+        }
+
+        h3 {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .navbar {
+            margin-bottom: 20px;
+        }
+
+        .nav-link-custom {
+            color: #ff1b1b; 
+        }
+        .nav-link-custom:hover {
+            color: #c82929; 
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <nav class="navbar navbar-expand-lg">
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">Router Connection</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/broadcast">Subnet Explorer</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/throughput">Real-Time Throughput</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </nav>
+    <h1>Real-Time Throughput Monitoring</h1>
+    <div id="charts"></div>
+    <script>
+        function createChart(interfaceName) {
+            const container = document.createElement('div');
+            container.className = 'chart-container';
+            container.innerHTML = `<h3>${interfaceName}</h3><canvas id="${interfaceName}-chart"></canvas>`;
+            document.getElementById('charts').appendChild(container);
+
+            const ctx = document.getElementById(`${interfaceName}-chart`).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: '5 Minute Input Rate (bps)',
+                            data: [],
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            fill: false,
+                            tension: 0.4
+                        },
+                        {
+                            label: '5 Minute Output Rate (bps)',
+                            data: [],
+                            borderColor: 'rgba(153, 102, 255, 1)',
+                            fill: false,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time (seconds)'
+                            },
+                            ticks: {
+                                autoSkip: true,
+                                maxRotation: 45,
+                                minRotation: 45,
+                                font: {
+                                    size: 10
+                                },
+                                padding: 5
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Throughput (bps)'
+                            },
+                            beginAtZero: true,
+                            grace: '5%'
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            padding: 10
+                        }
+                    },
+                    layout: {
+                        padding: {
+                            bottom: 50, // Further increased bottom padding
+                            top: 0 // Removed top padding to give all available space to the bottom
+                        }
+                    }
+                }                                
+            });
+        }
+
+        function fetchData() {
+            fetch('/data')
+                .then(response => response.json())
+                .then(data => {
+                    for (const [interfaceName, interfaceData] of Object.entries(data)) {
+                        if (!window.charts[interfaceName]) {
+                            window.charts[interfaceName] = createChart(interfaceName);
+                        }
+
+                        const chart = window.charts[interfaceName];
+                        chart.data.labels = interfaceData.time_intervals;
+                        chart.data.datasets[0].data = interfaceData.input_throughputs;
+                        chart.data.datasets[1].data = interfaceData.output_throughputs;
+                        chart.update();
+                    }
+                });
+        }
+
+        window.charts = {};
+        setInterval(fetchData, 3000);
+        fetchData();
+    </script>
+</body>
+
+</html>
