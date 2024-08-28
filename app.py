@@ -78,6 +78,70 @@ class NetmikoHandler:
         print(ip_addresses)
         return ip_addresses
 
+    def transform_arp_output(self):
+        arp_output = self.send_command("show arp")
+        lines = arp_output.strip().split("\n")[1:]
+
+        # Initialize the dictionary to hold the transformed output
+        arp_map = {}
+
+        for line in lines:
+            parts = [part for part in line.split() if part]
+            match = re.search(r'\s+(\S+)\s+\S+\s+(\S+)\s+(\S+)$', line)
+
+            if len(parts) >= 5:
+                ip_address = parts[1] if parts[1] != '-' else None
+                hardware_address = parts[3] if parts[3] != 'Incomplete' else None
+                if match:
+                    interface = match.group(3)
+
+                    # Only include entries with valid IP addresses and hardware addresses
+                    if ip_address and hardware_address:
+                        arp_map[ip_address] = [hardware_address, interface]
+
+        return arp_map
+
+    def combine_ip_interface(self):
+        # Send the commands to get the outputs
+        ip_output = self.connection.send_command("sh cdp entry * protocol | include IP")
+        interface_output = self.connection.send_command("sh cdp neighbors detail | include Interface")
+
+        def parse_ip_output(ip_output):
+            # Extract IP addresses from the output
+            ip_addresses = []
+            lines = ip_output.strip().splitlines()
+            for line in lines:
+                if "IP address:" in line:
+                    ip_address = line.split(":")[1].strip()
+                    ip_addresses.append(ip_address)
+            return ip_addresses
+
+        def parse_interface_output(interface_output):
+            # Extract interfaces from the output
+            interfaces = []
+            lines = interface_output.strip().splitlines()
+            for line in lines:
+                if "Interface:" in line:
+                    interface = line.split(",")[0].split(":")[1].strip()
+                    print(line)
+                    interfaces.append(interface)
+            return interfaces
+
+        # Parsing the outputs
+        ip_addresses = parse_ip_output(ip_output)
+        interfaces = parse_interface_output(interface_output)
+        print(ip_addresses, interfaces)
+        # Check lengths for mismatches
+        if len(ip_addresses) != len(interfaces):
+            raise ValueError("The number of IP addresses and interfaces does not match.")
+
+        # Combine IP addresses and interfaces into a dictionary
+        combined_map = {}
+        for ip, interface in zip(ip_addresses, interfaces):
+            combined_map[interface] = ip
+
+        return combined_map
+
 
 ssh_handlers = {}
 
@@ -194,64 +258,67 @@ def perform_operation():
         return jsonify({"status": "error", "message": "No active SSH session or connection not established"})
 
 
-@app.route('/traceroute', methods=['POST'])
-def traceroute():
+@app.route('/detailed_trace', methods=['POST'])
+def detailed_trace():
     def parse_next_hop(output):
-        match = re.search(r'\b(\d{1,3}\.){3}\d{1,3}\b', output)
-        if match:
-            return match.group()
+        # Split the output by lines
+        lines = output.strip().splitlines()
+        # Iterate over the lines to find the line containing the next hop
+        for line in lines:
+            # Find a line that contains the hop number followed by an IP address
+            match = re.search(r'\d+\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', line)
+            if match:
+                return match.group(1)
+
         return None
 
+
     devices = router_db.get_routers()
-    vpcs = host_db.find_documents()
     data = request.json
     source = data.get('source')
     destination = data.get('destination')
 
     trace_result = []
     current_hop = 1
-    current_ip = source
 
-    while current_ip != destination:
-        current_device = next((device for device in devices if device['host'] == current_ip), None)
+    current_hop_device = next((device for device in devices if source in device['interface']), None)
 
-        if current_device:
-            ssh_handler = NetmikoHandler(current_device)
-            ssh_handler.connect()
-            if ssh_handler and ssh_handler.connection:
-                command = f"traceroute {destination} ttl 1 2"
-                output = ssh_handler.send_command(command)
-                next_hop_ip = parse_next_hop(output)
+    while not (destination in current_hop_device["interface"]):
+        ssh_handler = NetmikoHandler(current_hop_device["connection"])
+        ssh_handler.connect()
+        if ssh_handler and ssh_handler.connection:
+            cdp_output = ssh_handler.combine_ip_interface()
+            print(cdp_output)
+            if re.match(r"SW\d+", current_hop_device["name"]):
+                command = f"traceroute {destination}"
+                next_device_ip = parse_next_hop(ssh_handler.send_command(command))
+                if next_device_ip in cdp_output.values():
+                    print("merhabalarmerhabalar")
+                    trace_result.append(current_hop_device)
+                    current_hop += 1
+                    current_hop_device = next((device for device in devices if next_device_ip in device['interface']), None)
+            else:
 
-                if next_hop_ip:
-                    trace_result.append({
-                        "hop": current_hop,
-                        "ip": current_ip,
-                        "device_type": "Router"
-                    })
-                    current_ip = next_hop_ip
-                else:
-                    trace_result.append({
-                        "hop": current_hop,
-                        "ip": current_ip,
-                        "device_type": "Unknown"
-                    })
-                    break
+                arp_output = ssh_handler.transform_arp_output()
+                print(arp_output)
+                command = f"traceroute {destination} ttl 1 1"
+                next_device_ip = parse_next_hop(ssh_handler.send_command(command))
+                print(next_device_ip)
+                interface = arp_output[next_device_ip][1]
+                print(interface)
+                if arp_output[next_device_ip][1] in cdp_output.keys():
 
-        # Check if the current_ip matches any host in vpcs
-        current_vpcs = next((vpc for vpc in vpcs if vpc['host'] == current_ip), None)
+                    trace_result.append(current_hop_device)
+                    current_hop += 1
+                    current_hop_device = next((device for device in devices if str(cdp_output[interface]) in device['interface']), None)
+        ssh_handler.disconnect()
 
-        if current_vpcs:
-            trace_result.append({
-                "hop": current_hop,
-                "ip": current_ip,
-                "device_type": "VPCS"
-            })
-            break
 
-        current_hop += 1
-
+    trace_result.append(current_hop_device)
+    current_hop += 1
     return jsonify({"status": "success", "trace": trace_result})
+
+
 
 
 def format_interface_brief(output):
@@ -323,7 +390,7 @@ def add_device():
     data = request.json
     device_type = data.get("deviceType")
 
-    if device_type == "router":
+    if device_type == "router" :
         host = data.get("host")
         name = data.get("name")
         username = data.get("username")
@@ -344,7 +411,7 @@ def add_device():
             new_device = {
                 "name": name,
                 "connection": connection,
-                "interface": []
+                "interface": ssh_handler.get_interface_ips()
             }
             result = router_db.add_router(new_device)
             ssh_handler.disconnect()
@@ -361,7 +428,6 @@ def add_device():
         pass
     else:
         return jsonify({"status": "error", "message": "Invalid device type"}), 400
-
 
 
 if __name__ == "__main__":

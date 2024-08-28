@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Network Device Pinger</title>
+    <title>Network Monitoring App</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <style>
@@ -153,7 +153,7 @@
 
 <body>
     <div class="container">
-        <h1 class="text-center">Network Device Pinger</h1>
+        <h1 class="text-center">Network Monitoring App</h1>
         <button class="btn btn-primary btn-block mb-4" id="broadcast-btn">Broadcast to All Devices</button>
         <div id="devices-container" class="mt-4">
             <!-- Device cards will be populated here -->
@@ -261,6 +261,26 @@
     </div>
 </div>
 
+<!-- Traceroute Form -->
+<div class="container mt-5">
+    <h2 class="text-center">Detailed Traceroute</h2>
+    <form id="traceroute-form">
+        <div class="form-group">
+            <label for="source-name">Source Name</label>
+            <input type="text" class="form-control" id="source-name" name="source_name" required>
+        </div>
+        <div class="form-group">
+            <label for="destination-ip">Destination IP</label>
+            <input type="text" class="form-control" id="destination-ip" name="destination_ip" required>
+        </div>
+        <button type="submit" class="btn btn-primary" id="traceroute-btn">Perform Traceroute</button>
+    </form>
+    <div id="trace-output-container" class="output-section mt-4">
+        <!-- Traceroute output will be displayed here -->
+    </div>
+</div>
+
+
 
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
@@ -301,40 +321,43 @@
         // Set up polling every 5 seconds (5000 milliseconds)
         setInterval(loadDevices, 5000);
 
-        $('#traceroute-btn').click(function () {
-            let sourceIp = $('#source-ip').val();
-            let destinationIp = $('#destination-ip').val();
+$(document).ready(function () {
+    // Handle form submission for detailed traceroute
+    $('#traceroute-form').submit(function (event) {
+        event.preventDefault();
 
-            if (sourceIp && destinationIp) {
-                $.ajax({
-                    url: '/traceroute',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ source: sourceIp, destination: destinationIp }),
-                    success: function (response) {
-                        if (response.status === 'success') {
-                            let traceOutput = '<h6>Traceroute Result:</h6>';
-                            traceOutput += '<pre>';
-                            response.trace.forEach(hop => {
-                                traceOutput += `Hop ${hop.hop}: ${hop.ip} (${hop.device_type})\n`;
-                            });
-                            traceOutput += '</pre>';
+        let source = $('#source-name').val();
+        let destination = $('#destination-ip').val();
 
-                            // Display the traceroute result in the new trace output container
-                            $('#trace-output-container').html(traceOutput);
-                        } else {
-                            alert('Traceroute failed: ' + response.message);
-                        }
-                    },
-                    error: function (jqXHR, textStatus, errorThrown) {
-                        console.error('Error performing traceroute:', textStatus, errorThrown);
-                        alert('An error occurred while performing traceroute. Please check the console for more details.');
+        if (source && destination) {
+            $.ajax({
+                url: '/detailed_trace',  // Update the URL to match the Flask route
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ source: source, destination: destination }),
+                success: function (response) {
+                    if (response.status === 'success') {
+                        let traceOutput = '<h6>Detailed Traceroute Result:</h6>';
+                        traceOutput += '<pre>';
+                        response.trace.forEach((hop, index) => {
+                            traceOutput += `Hop ${index + 1}: ${hop.name}, IP: ${hop.connection.host},\n`;
+                        });
+                        traceOutput += '</pre>';
+                        $('#trace-output-container').html(traceOutput);
+                    } else {
+                        alert('Traceroute failed: ' + response.message);
                     }
-                });
-            } else {
-                alert('Please enter both source and destination IP addresses.');
-            }
-        });
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    console.error('Error performing traceroute:', textStatus, errorThrown);
+                    alert('An error occurred while performing traceroute. Please check the console for more details.');
+                }
+            });
+        } else {
+            alert('Please enter both source and destination IP addresses.');
+        }
+    });
+});
 
         $(document).on('click', '.connect-btn', function (event) {
             event.preventDefault();
@@ -367,58 +390,58 @@
             }
         });
 
-$(document).on('click', '.operation-btn', function () {
-    let host = $('#operationsModal').data('host');
-    let operation = $(this).attr('data-operation');
-    let button = $(this);
-    button.addClass('btn-loading loading');
+        $(document).on('click', '.operation-btn', function () {
+            let host = $('#operationsModal').data('host');
+            let operation = $(this).attr('data-operation');
+            let button = $(this);
+            button.addClass('btn-loading loading');
 
-    $.ajax({
-        url: '/perform_operation',
-        type: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({ host: host, operation: operation }),
-        success: function (response) {
-            button.removeClass('loading');
-            if (response.status === 'success') {
-                let outputHtml = '';
+            $.ajax({
+                url: '/perform_operation',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ host: host, operation: operation }),
+                success: function (response) {
+                    button.removeClass('loading');
+                    if (response.status === 'success') {
+                        let outputHtml = '';
 
-                if (Array.isArray(response.output)) {
-                    // Handle structured output
-                    outputHtml += '<h6>' + operation + ' Output:</h6>';
-                    outputHtml += '<table class="table"><thead><tr>';
-                    Object.keys(response.output[0]).forEach(key => {
-                        outputHtml += '<th>' + key + '</th>';
-                    });
-                    outputHtml += '</tr></thead><tbody>';
-                    response.output.forEach(row => {
-                        outputHtml += '<tr>';
-                        Object.values(row).forEach(value => {
-                            outputHtml += '<td>' + value + '</td>';
-                        });
-                        outputHtml += '</tr>';
-                    });
-                    outputHtml += '</tbody></table>';
-                } else {
-                    // Handle plain text output
-                    outputHtml += '<h6>' + operation + ' Output:</h6>';
-                    outputHtml += '<pre>' + response.output + '</pre>';
+                        if (Array.isArray(response.output)) {
+                            // Handle structured output
+                            outputHtml += '<h6>' + operation + ' Output:</h6>';
+                            outputHtml += '<table class="table"><thead><tr>';
+                            Object.keys(response.output[0]).forEach(key => {
+                                outputHtml += '<th>' + key + '</th>';
+                            });
+                            outputHtml += '</tr></thead><tbody>';
+                            response.output.forEach(row => {
+                                outputHtml += '<tr>';
+                                Object.values(row).forEach(value => {
+                                    outputHtml += '<td>' + value + '</td>';
+                                });
+                                outputHtml += '</tr>';
+                            });
+                            outputHtml += '</tbody></table>';
+                        } else {
+                            // Handle plain text output
+                            outputHtml += '<h6>' + operation + ' Output:</h6>';
+                            outputHtml += '<pre>' + response.output + '</pre>';
+                        }
+
+                        // Clear previous output and append new output
+                        $('#output-container').empty().append(outputHtml);
+                    } else {
+                        console.error('Operation failed:', response.message);
+                        alert('Operation failed: ' + response.message);
+                    }
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    button.removeClass('loading');
+                    console.error('Error performing operation:', textStatus, errorThrown);
+                    alert('An error occurred while performing the operation. Please check the console for more details.');
                 }
-
-                // Clear previous output and append new output
-                $('#output-container').empty().append(outputHtml);
-            } else {
-                console.error('Operation failed:', response.message);
-                alert('Operation failed: ' + response.message);
-            }
-        },
-        error: function (jqXHR, textStatus, errorThrown) {
-            button.removeClass('loading');
-            console.error('Error performing operation:', textStatus, errorThrown);
-            alert('An error occurred while performing the operation. Please check the console for more details.');
-        }
-    });
-});
+            });
+        });
 
 
         $(document).ready(function () {
